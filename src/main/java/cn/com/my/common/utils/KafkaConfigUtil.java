@@ -2,17 +2,12 @@ package cn.com.my.common.utils;
 
 
 import cn.com.my.common.constant.PropertiesConstants;
-import cn.com.my.common.model.MetricEvent;
-import cn.com.my.common.schemas.MetricSchema;
-import cn.com.my.common.watermarks.MetricWatermark;
+import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
-import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer011;
 import org.apache.flink.streaming.connectors.kafka.internals.KafkaTopicPartition;
-import org.apache.flink.table.api.TableSchema;
-import org.apache.flink.types.Row;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndTimestamp;
 import org.apache.kafka.common.PartitionInfo;
@@ -29,21 +24,12 @@ import static cn.com.my.common.constant.PropertiesConstants.*;
 
 public class KafkaConfigUtil {
 
-    /**
-     * 设置基础的 Kafka 配置
-     *
-     * @return
-     */
+
     public static Properties buildKafkaProps() {
         return buildKafkaProps(ParameterTool.fromSystemProperties());
     }
 
-    /**
-     * 设置 kafka 配置
-     *
-     * @param parameterTool
-     * @return
-     */
+
     public static Properties buildKafkaProps(ParameterTool parameterTool) {
         Properties props = parameterTool.getProperties();
         props.put("bootstrap.servers", parameterTool.get(PropertiesConstants.KAFKA_BROKERS, DEFAULT_KAFKA_BROKERS));
@@ -56,26 +42,22 @@ public class KafkaConfigUtil {
     }
 
 
-    public static DataStreamSource<Row> buildSource(StreamExecutionEnvironment env, TableSchema tableSchema) {
+    public static DataStreamSource<String> buildSource(StreamExecutionEnvironment env, SimpleStringSchema rowSchema) {
         ParameterTool parameter = (ParameterTool) env.getConfig().getGlobalJobParameters();
         String topic = parameter.getRequired(PropertiesConstants.METRICS_TOPIC);
         Long time = parameter.getLong(PropertiesConstants.CONSUMER_FROM_TIME, 0L);
-        return buildSource(env, topic, time, tableSchema);
+        return buildSource(env, topic, time, rowSchema);
     }
 
-    /**
-     * @param env
-     * @param topic
-     * @param time  订阅的时间
-     * @return
-     */
-    public static DataStreamSource<Row> buildSource(StreamExecutionEnvironment env, String topic, Long time, TableSchema tableSchema) {
+
+    public static DataStreamSource<String> buildSource(StreamExecutionEnvironment env, String topic, Long time, SimpleStringSchema rowSchema) {
         ParameterTool parameterTool = (ParameterTool) env.getConfig().getGlobalJobParameters();
         Properties props = buildKafkaProps(parameterTool);
-        FlinkKafkaConsumer011<Row> consumer = new FlinkKafkaConsumer011<Row>(
+        FlinkKafkaConsumer011<String> consumer = new FlinkKafkaConsumer011<>(
                 topic,
-                tableSchema,
+                rowSchema,
                 props);
+
         //重置offset到time时刻
         if (time != 0L) {
             Map<KafkaTopicPartition, Long> partitionOffset = buildOffsetByTime(props, parameterTool, time);
@@ -100,7 +82,7 @@ public class KafkaConfigUtil {
         return partitionOffset;
     }
 
-    public static SingleOutputStreamOperator<MetricEvent> parseSource(DataStreamSource<MetricEvent> dataStreamSource) {
-        return dataStreamSource.assignTimestampsAndWatermarks(new MetricWatermark());
-    }
+//    public static SingleOutputStreamOperator<MetricEvent> parseSource(DataStreamSource<MetricEvent> dataStreamSource) {
+//        return dataStreamSource.assignTimestampsAndWatermarks(new MetricWatermark());
+//    }
 }

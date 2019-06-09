@@ -3,7 +3,6 @@ package cn.com.my.hbase;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.io.OutputFormat;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.configuration.Configuration;
 
@@ -14,9 +13,7 @@ import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Objects;
-import java.util.Optional;
 
 @Slf4j
 @Builder

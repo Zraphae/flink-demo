@@ -1,13 +1,21 @@
 package cn.com.my;
 
+import cn.com.my.common.utils.ExecutionEnvUtil;
+import cn.com.my.hbase.HBaseOutputFormat4J;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
+import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
+import org.apache.flink.table.descriptors.Json;
 import org.apache.flink.table.descriptors.Kafka;
-import org.apache.flink.table.descriptors.Rowtime;
 import org.apache.flink.table.descriptors.Schema;
+import org.apache.flink.types.Row;
 
 
 public class Main2 {
@@ -15,68 +23,76 @@ public class Main2 {
 
         // Read parameters from command line
         final ParameterTool params = ParameterTool.fromArgs(args);
+//
+//        if (params.getNumberOfParameters() < 4) {
+//            System.out.println("\nUsage: FlinkReadKafka " +
+//                    "--read-topic <topic> " +
+//                    "--write-topic <topic> " +
+//                    "--bootstrap.servers <kafka brokers> " +
+//                    "--group.id <groupid>");
+//            return;
+//        }
 
-        if(params.getNumberOfParameters() < 4) {
-            System.out.println("\nUsage: FlinkReadKafka " +
-                    "--read-topic <topic> " +
-                    "--write-topic <topic> " +
-                    "--bootstrap.servers <kafka brokers> " +
-                    "--group.id <groupid>");
-            return;
-        }
 
-
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        StreamExecutionEnvironment env = ExecutionEnvUtil.prepare(params);
         env.getConfig().setRestartStrategy(RestartStrategies.fixedDelayRestart(4, 10000));
         env.enableCheckpointing(300000); // 300 seconds
-        env.getConfig().setGlobalJobParameters(params);
 
-        StreamTableEnvironment tableEnvironment = StreamTableEnvironment.create(env);
+        StreamTableEnvironment tEnv = StreamTableEnvironment.create(env);
 
-        tableEnvironment
-                // declare the external system to connect to
+        // define a schema
+        String[] fieldNames = {"id", "num", "ts", "timestampOp"};
+        TypeInformation<?>[] dataTypes = {Types.STRING, Types.LONG, Types.STRING, Types.LONG};
+        TypeInformation<Row> dataRow = Types.ROW_NAMED(fieldNames, dataTypes);
+        TableSchema tableSchema = TableSchema.fromTypeInfo(dataRow);
+
+        tEnv
                 .connect(
                         new Kafka()
-                                .version("0.10")
-                                .topic("test-input")
-                                .startFromEarliest()
+                                .version("0.11")
+                                .topic("test")
+                                .startFromLatest()
                                 .property("zookeeper.connect", "localhost:2181")
-                                .property("bootstrap.servers", "localhost:9092")
+                                .property("bootstrap.servers", "localhost:9092"))
+                .withFormat(
+                        new Json()
+                                .failOnMissingField(false)
+                                .deriveSchema()
                 )
-
-                // declare a format for this system
-//                .withFormat(
-//                        new Json
-//                                .(
-//                                        "{" +
-//                                                "  \"namespace\": \"org.myorganization\"," +
-//                                                "  \"type\": \"record\"," +
-//                                                "  \"name\": \"UserMessage\"," +
-//                                                "    \"fields\": [" +
-//                                                "      {\"name\": \"timestamp\", \"type\": \"string\"}," +
-//                                                "      {\"name\": \"user\", \"type\": \"long\"}," +
-//                                                "      {\"name\": \"message\", \"type\": [\"string\", \"null\"]}" +
-//                                                "    ]" +
-//                                                "}"
-//                                )
-//                )
-                // declare the schema of the table
                 .withSchema(
-                        new Schema()
-                                .field("rowtime", Types.SQL_TIMESTAMP)
-                                .rowtime(new Rowtime()
-                                        .timestampsFromField("timestamp")
-                                        .watermarksPeriodicBounded(60000)
-                                )
-                                .field("user", Types.LONG)
-                                .field("message", Types.STRING)
+                        getKafkaSchema(tableSchema)
+//                        new Schema()
+//                                .field("id", Types.STRING)
+//                                .field("num", Types.LONG)
+//                                .field("ts", Types.STRING)
+//                                .field("timestampOp", Types.LONG)
                 )
-
-                // specify the update-mode for streaming tables
                 .inAppendMode()
+                .registerTableSource("kafkaTable");
 
-                // register as source, sink, or both and under a name
-                .registerTableSource("MyUserTable");
-        env.execute("FlinkReadWriteKafkaJSON");
+        Table result = tEnv.sqlQuery("SELECT id, num+1 as num, ts, timestampOp FROM kafkaTable");
+
+        DataStream<Row> rowDataStream = tEnv.toAppendStream(result, dataRow);
+        rowDataStream.print();
+
+        HBaseOutputFormat4J hBaseOutputFormat4J = HBaseOutputFormat4J.builder()
+                .hbaseZookeeperQuorum("localhost")
+                .hbaseZookeeperClientPort("2181")
+                .dataRow((RowTypeInfo) dataRow)
+                .tableNameStr("test")
+                .family("info")
+                .rowKeyFiled("id")
+                .build();
+        rowDataStream.writeUsingOutputFormat(hBaseOutputFormat4J);
+
+        env.execute("flink demo");
+    }
+
+    private static Schema getKafkaSchema(TableSchema tableSchema) {
+        Schema schema = new Schema();
+        for (int index = 0; index < tableSchema.getFieldCount(); index++) {
+            schema.field(tableSchema.getFieldNames()[index], tableSchema.getFieldTypes()[index]);
+        }
+        return schema;
     }
 }
