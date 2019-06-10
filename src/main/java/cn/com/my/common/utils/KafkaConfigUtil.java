@@ -2,6 +2,7 @@ package cn.com.my.common.utils;
 
 
 import cn.com.my.common.constant.PropertiesConstants;
+import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
@@ -42,20 +43,20 @@ public class KafkaConfigUtil {
     }
 
 
-    public static DataStreamSource<String> buildSource(StreamExecutionEnvironment env, SimpleStringSchema rowSchema) {
+    public static DataStreamSource buildSource(StreamExecutionEnvironment env, DeserializationSchema schema) {
         ParameterTool parameter = (ParameterTool) env.getConfig().getGlobalJobParameters();
         String topic = parameter.getRequired(PropertiesConstants.METRICS_TOPIC);
         Long time = parameter.getLong(PropertiesConstants.CONSUMER_FROM_TIME, 0L);
-        return buildSource(env, topic, time, rowSchema);
+        return buildSource(env, topic, time, schema);
     }
 
 
-    public static DataStreamSource<String> buildSource(StreamExecutionEnvironment env, String topic, Long time, SimpleStringSchema rowSchema) {
+    public static DataStreamSource buildSource(StreamExecutionEnvironment env, String topic, Long time, DeserializationSchema schema) {
         ParameterTool parameterTool = (ParameterTool) env.getConfig().getGlobalJobParameters();
         Properties props = buildKafkaProps(parameterTool);
-        FlinkKafkaConsumer011<String> consumer = new FlinkKafkaConsumer011<>(
+        FlinkKafkaConsumer011 consumer = new FlinkKafkaConsumer011<>(
                 topic,
-                rowSchema,
+                schema,
                 props);
 
         //重置offset到time时刻
