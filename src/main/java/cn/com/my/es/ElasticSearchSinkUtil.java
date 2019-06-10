@@ -2,7 +2,6 @@ package cn.com.my.es;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.connectors.elasticsearch.ActionRequestFailureHandler;
 import org.apache.flink.streaming.connectors.elasticsearch.ElasticsearchSinkFunction;
 import org.apache.flink.streaming.connectors.elasticsearch.RequestIndexer;
@@ -26,8 +25,8 @@ import java.util.Optional;
 public class ElasticSearchSinkUtil {
 
 
-    public static <T> void addSink(List<HttpHost> hosts, int bulkFlushMaxActions, int parallelism,
-                                   DataStream<Row> data, ElasticsearchSinkFunction<Row> func) {
+    public static void addSink(List<HttpHost> hosts, int bulkFlushMaxActions, int parallelism,
+                               DataStream<Row> data, ElasticsearchSinkFunction<Row> func) {
         ElasticsearchSink.Builder<Row> esSinkBuilder = new ElasticsearchSink.Builder<>(hosts, func);
         esSinkBuilder.setBulkFlushMaxActions(bulkFlushMaxActions);
         esSinkBuilder.setFailureHandler(new RetryRejectedExecutionFailureHandler());
@@ -63,7 +62,7 @@ public class ElasticSearchSinkUtil {
         @Override
         public void onFailure(ActionRequest action, Throwable failure, int restStatusCode, RequestIndexer indexer) throws Throwable {
             if (ExceptionUtils.findThrowable(failure, EsRejectedExecutionException.class).isPresent()) {
-                indexer.add(new ActionRequest[]{action});
+                indexer.add(action);
             } else {
                 if (ExceptionUtils.findThrowable(failure, SocketTimeoutException.class).isPresent()) {
                     // 忽略写入超时，因为ElasticSearchSink 内部会重试请求，不需要抛出来去重启 flink job
@@ -74,9 +73,9 @@ public class ElasticSearchSinkUtil {
                         IOException ioExp = exp.get();
                         if (ioExp != null && ioExp.getMessage() != null && ioExp.getMessage().contains("max retry timeout")) {
                             // request retries exceeded max retry timeout
-                            // 经过多次不同的节点重试，还是写入失败的，则忽略这个错误，丢失数据。
+                            // 经过多次不同的节点重试，还是写入失败的，则抛出异常，重启 flink job，如果return则数据将丢失
                             log.error(ioExp.getMessage());
-                            return;
+                            throw failure;
                         }
                     }
                 }

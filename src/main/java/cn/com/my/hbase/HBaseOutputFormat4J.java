@@ -89,13 +89,14 @@ public class HBaseOutputFormat4J implements OutputFormat<Row> {
                     put.addColumn(Bytes.toBytes(this.family), Bytes.toBytes(key), Bytes.toBytes((long) value));
                 } else if (type instanceof Float) {
                     put.addColumn(Bytes.toBytes(this.family), Bytes.toBytes(key), Bytes.toBytes((float) value));
+                } else if (type instanceof Double){
+                    put.addColumn(Bytes.toBytes(this.family), Bytes.toBytes(key), Bytes.toBytes((double) value));
                 } else if (type instanceof String) {
                     put.addColumn(Bytes.toBytes(this.family), Bytes.toBytes(key), Bytes.toBytes((String) value));
                 } else {
                     String errorMessage = String.format(
                             "field index: %s, field value: %s, field type: %s.", index, key, type);
-                    ClassCastException enrichedException = new ClassCastException(errorMessage);
-                    throw enrichedException;
+                    throw new ClassCastException(errorMessage);
                 }
             }
 

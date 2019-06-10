@@ -96,6 +96,13 @@ public class Main2 {
                 .build();
         rowDataStream.writeUsingOutputFormat(hBaseOutputFormat4J);
 
+
+        // define a es schema
+        String[] esSourceFields = {"id", "num"};
+        TypeInformation<?>[] esDataTypes = {Types.STRING, Types.LONG};
+        TypeInformation<Row> esDataRow = Types.ROW_NAMED(esSourceFields, esDataTypes);
+        TableSchema esSchema = TableSchema.fromTypeInfo(esDataRow);
+
         List<HttpHost> esAddresses = ElasticSearchSinkUtil.getEsAddresses(params.get(ELASTICSEARCH_HOSTS));
         int bulkSize = params.getInt(ELASTICSEARCH_BULK_FLUSH_MAX_ACTIONS, 40);
         int sinkParallelism = params.getInt(STREAM_SINK_PARALLELISM, 5);
@@ -107,7 +114,7 @@ public class Main2 {
                         requestIndexer.add(Requests.indexRequest()
                                 .index("test_index")
                                 .type("test_type")
-                                .source(GsonUtil.toJSONBytes(record), XContentType.JSON)));
+                                .source(GsonUtil.toJSONBytes(record, esSchema, (RowTypeInfo) dataRow), XContentType.JSON)));
 
         env.execute("flink demo");
     }
