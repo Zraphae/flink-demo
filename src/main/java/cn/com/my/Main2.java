@@ -11,7 +11,11 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.runtime.state.StateBackend;
+import org.apache.flink.runtime.state.filesystem.FsStateBackend;
+import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.elasticsearch.RequestIndexer;
 import org.apache.flink.table.api.Table;
@@ -25,12 +29,16 @@ import org.apache.http.HttpHost;
 import org.elasticsearch.client.Requests;
 import org.elasticsearch.common.xcontent.XContentType;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static cn.com.my.common.constant.PropertiesConstants.*;
 
 @Slf4j
 public class Main2 {
+
+    private static final String FLINK_CHECKPOINT_PATH = "hdfs://pengzhaos-MacBook-Pro.local:9000/checkpoints-data/";
+
     public static void main(String[] args) throws Exception {
 
         // Read parameters from command line
@@ -46,8 +54,30 @@ public class Main2 {
 //        }
 
         StreamExecutionEnvironment env = ExecutionEnvUtil.prepare(params);
-        env.getConfig().setRestartStrategy(RestartStrategies.fixedDelayRestart(4, 10000));
-        env.enableCheckpointing(300000); // 300 seconds
+
+        // start a checkpoint every 1000 ms
+        env.enableCheckpointing(1000);
+
+        env.setStateBackend((StateBackend)new FsStateBackend(FLINK_CHECKPOINT_PATH, false));
+        // set mode to exactly-once (this is the default)
+        env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
+
+        // make sure 500 ms of progress happen between checkpoints
+        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(500);
+
+        // checkpoints have to complete within one minute, or are discarded
+        env.getCheckpointConfig().setCheckpointTimeout(60000);
+
+        // allow only one checkpoint to be in progress at the same time
+        env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
+
+        // enable externalized checkpoints which are retained after job cancellation
+        env.getCheckpointConfig()
+                .enableExternalizedCheckpoints(CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
+
+        env.getConfig()
+                .setRestartStrategy(RestartStrategies.fixedDelayRestart(4, 10 * 1000L));
+
 
         StreamTableEnvironment tEnv = StreamTableEnvironment.create(env);
 
@@ -62,9 +92,16 @@ public class Main2 {
                         new Kafka()
                                 .version("0.11")
                                 .topic("test")
-                                .startFromLatest()
-                                .property("zookeeper.connect", "localhost:2181")
-                                .property("bootstrap.servers", "localhost:9092"))
+                                .property("bootstrap.servers", "localhost:9092")
+                                .property("group.id", "test")
+                                /**
+                                 * Note that these start position configuration methods do not affect the start position
+                                 * when the job is automatically restored from a failure or manually restored using a savepoint.
+                                 * On restore, the start position of each Kafka partition is determined by the offsets stored
+                                 * in the savepoint or checkpoint.
+                                 */
+                                .startFromGroupOffsets()
+                        )
                 .withFormat(
                         new Json()
                                 .failOnMissingField(false)
@@ -99,7 +136,10 @@ public class Main2 {
 
         String[] esIndexFields = {"id", "num"};
 
-        List<HttpHost> esAddresses = ElasticSearchSinkUtil.getEsAddresses(params.get(ELASTICSEARCH_HOSTS));
+//        List<HttpHost> esAddresses = ElasticSearchSinkUtil.getEsAddresses(params.get(ELASTICSEARCH_HOSTS));
+        List<HttpHost> esAddresses = new ArrayList<>();
+        esAddresses.add(new HttpHost("127.0.0.1", 9200, "http"));
+
         int bulkSize = params.getInt(ELASTICSEARCH_BULK_FLUSH_MAX_ACTIONS, 40);
         int sinkParallelism = params.getInt(STREAM_SINK_PARALLELISM, 5);
 

@@ -20,6 +20,6 @@ public class PropertiesConstants {
 
     //es config
     public static final String ELASTICSEARCH_BULK_FLUSH_MAX_ACTIONS = "elasticsearch.bulk.flush.max.actions";
-    public static final String ELASTICSEARCH_HOSTS = "elasticsearch.hosts";
+    public static final String ELASTICSEARCH_HOSTS = "localhost:9300";
 
 }

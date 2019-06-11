@@ -72,8 +72,7 @@ public class ElasticSearchSinkUtil {
                     if (exp.isPresent()) {
                         IOException ioExp = exp.get();
                         if (ioExp != null && ioExp.getMessage() != null && ioExp.getMessage().contains("max retry timeout")) {
-                            // request retries exceeded max retry timeout
-                            // 经过多次不同的节点重试，还是写入失败的，则抛出异常，重启 flink job，如果return则数据将丢失
+                            // request retries exceeded max retry timeout, throw failure, restart flink job
                             log.error(ioExp.getMessage());
                             throw failure;
                         }
