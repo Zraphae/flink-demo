@@ -106,9 +106,6 @@ public class TestCase {
         TypeInformation<Row> dataRow = Types.ROW_NAMED(fieldNames, dataTypes);
 
         String[] esFieldNames = {"id", "ts"};
-        TypeInformation<?>[] esDataTypes = {Types.INT, Types.STRING};
-        TypeInformation<Row> esDataRow = Types.ROW_NAMED(esFieldNames, esDataTypes);
-        TableSchema esSchema = TableSchema.fromTypeInfo(esDataRow);
 
         Row record = new Row(4);
         record.setField(0, 1);
@@ -116,7 +113,7 @@ public class TestCase {
         record.setField(2, "1sdkjk");
         record.setField(3, 2L);
 
-        byte[] bytes = GsonUtil.toJSONBytes(record, esSchema, (RowTypeInfo) dataRow);
+        byte[] bytes = GsonUtil.toJSONBytes(record, esFieldNames, (RowTypeInfo) dataRow);
 
         log.info("==>{}", new String(bytes));
     }
