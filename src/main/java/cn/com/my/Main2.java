@@ -52,7 +52,6 @@ public class Main2 {
 //                    "--group.id <groupid>");
 //            return;
 //        }
-
         StreamExecutionEnvironment env = ExecutionEnvUtil.prepare(params);
 
         // start a checkpoint every 1000 ms
@@ -71,13 +70,14 @@ public class Main2 {
         // allow only one checkpoint to be in progress at the same time
         env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
 
+        env.setParallelism(2);
+
         // enable externalized checkpoints which are retained after job cancellation
         env.getCheckpointConfig()
                 .enableExternalizedCheckpoints(CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
 
         env.getConfig()
                 .setRestartStrategy(RestartStrategies.fixedDelayRestart(4, 10 * 1000L));
-
 
         StreamTableEnvironment tEnv = StreamTableEnvironment.create(env);
 
@@ -91,6 +91,7 @@ public class Main2 {
                 .connect(
                         new Kafka()
                                 .version("0.11")
+                                .property("type", "kafka")
                                 .topic("test")
                                 .property("bootstrap.servers", "localhost:9092")
                                 .property("group.id", "test")
