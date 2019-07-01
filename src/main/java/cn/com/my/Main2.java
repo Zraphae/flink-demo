@@ -11,8 +11,8 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.contrib.streaming.state.RocksDBStateBackend;
 import org.apache.flink.runtime.state.StateBackend;
-import org.apache.flink.runtime.state.filesystem.FsStateBackend;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
@@ -57,7 +57,7 @@ public class Main2 {
         // start a checkpoint every 1000 ms
         env.enableCheckpointing(1000);
 
-        env.setStateBackend((StateBackend)new FsStateBackend(FLINK_CHECKPOINT_PATH, false));
+        env.setStateBackend((StateBackend)new RocksDBStateBackend(FLINK_CHECKPOINT_PATH, true));
         // set mode to exactly-once (this is the default)
         env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
 
