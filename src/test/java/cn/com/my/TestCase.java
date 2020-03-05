@@ -13,7 +13,9 @@ import org.apache.flink.api.common.typeinfo.PrimitiveArrayTypeInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
+import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.TableSchema;
+import org.apache.flink.table.types.DataType;
 import org.apache.flink.types.Row;
 import org.apache.orc.TypeDescription;
 import org.junit.Assert;
@@ -160,11 +162,23 @@ public class TestCase {
 
         // validate field names
         Assert.assertArrayEquals(
-                new String[] {
+                new String[]{
                         "boolean1", "byte1", "short1", "int1", "long1", "float1", "double1",
                         "bytes1", "string1", "date1", "timestamp1", "decimal1"
                 },
                 rowTypeInfo.getFieldNames());
+
+    }
+
+    @Test
+    public void testTableSchemaBuilder() {
+        String[] fieldNames = {"id", "num", "ts", "timestampOp"};
+        DataType[] dataTypes = {DataTypes.STRING(), DataTypes.BIGINT(), DataTypes.STRING(), DataTypes.BIGINT()};
+        TableSchema.Builder builder = TableSchema.builder();
+        for (int index = 0; index < fieldNames.length; index++) {
+            builder.field(fieldNames[index], dataTypes[index]);
+        }
+        log.info("===>{}", builder.build());
 
     }
 }
