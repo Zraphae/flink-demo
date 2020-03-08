@@ -1,8 +1,11 @@
 package cn.com.my;
 
+import cn.com.my.common.model.OGGMessage;
 import cn.com.my.common.utils.GsonUtil;
 import cn.com.my.common.utils.OrcBatchReader;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.beanutils.DynaBean;
 import org.apache.commons.beanutils.LazyDynaBean;
@@ -22,7 +25,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 
 @Slf4j
@@ -179,6 +184,29 @@ public class TestCase {
             builder.field(fieldNames[index], dataTypes[index]);
         }
         log.info("===>{}", builder.build());
+
+    }
+
+
+    @Test
+    public void testOGGMessageParse() {
+        OGGMessage message = OGGMessage.builder()
+                .table("test")
+                .opType("I")
+                .opTs("2020-02-26 02:31:31")
+                .pos("13123123123")
+                .data("{\"is_hit\":\"N\",\"seq_no\":\"123878646264264\"}")
+                .build();
+
+        String json = GsonUtil.toJson(message);
+        log.info("==>jsonStr: {}", json);
+
+        JsonObject jsonObject = GsonUtil.parse2JsonObj(message.getData());
+        log.info("==>dataJsonObject: {}", jsonObject);
+
+        Set<Map.Entry<String, JsonElement>> entries = jsonObject.entrySet();
+        entries.forEach(element ->
+                log.info("element.key: {}, element.value: {}", element.getKey(), element.getValue().getAsString()));
 
     }
 }

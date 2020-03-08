@@ -1,5 +1,6 @@
 package cn.com.my.hbase;
 
+import com.google.common.collect.Lists;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
@@ -13,11 +14,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import java.util.List;
 import java.util.Objects;
 
 @Slf4j
 @Builder
-public class ProcessFunction4J extends ProcessFunction<Row, String> {
+public class ProcessFunction4J extends ProcessFunction<List<Row>, List<String>> {
 
     private String rowKeyFiled;
     private String tableNameStr;
@@ -46,15 +48,17 @@ public class ProcessFunction4J extends ProcessFunction<Row, String> {
     }
 
     @Override
-    public void processElement(Row value, Context ctx, Collector<String> out) throws Exception {
-        log.info("======>input: {}", value);
-        Get get = new Get(Bytes.toBytes("135"));
-        Result result = this.table.get(get);
-        byte[] tsValue = result.getValue(Bytes.toBytes("info"), Bytes.toBytes("ts"));
-        log.info("======>output: {}", Bytes.toString(tsValue));
-
-        out.collect("======>output: {}" + Bytes.toString(tsValue));
-
+    public void processElement(List<Row> rows, Context ctx, Collector<List<String>> out) throws Exception {
+        log.info("======>input: {}", rows);
+        List<String> kafkaMsgs = Lists.newArrayList();
+//        Get get = new Get(Bytes.toBytes("135"));
+//        Result result = this.table.get(get);
+//        byte[] tsValue = result.getValue(Bytes.toBytes("info"), Bytes.toBytes("ts"));
+//        log.info("======>output: {}", Bytes.toString(tsValue));
+//        kafkaMsgs.add(Bytes.toString(tsValue));
+        kafkaMsgs.add("123123");
+        kafkaMsgs.add("456789");
+        out.collect(kafkaMsgs);
     }
 
     @Override
@@ -62,4 +66,6 @@ public class ProcessFunction4J extends ProcessFunction<Row, String> {
         if (Objects.isNull(table)) table.close();
         if (Objects.isNull(conn)) conn.close();
     }
+
+
 }
