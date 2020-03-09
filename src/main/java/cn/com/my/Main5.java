@@ -178,10 +178,10 @@ public class Main5 {
                     }
                 });
 
-        FlinkKafkaProducer011<String> kafkaProducer011 = new FlinkKafkaProducer011(
-                "localhost:9092",
-                "my-topic",
-                new SimpleStringSchema());
+//        FlinkKafkaProducer011<String> kafkaProducer011 = new FlinkKafkaProducer011(
+//                "localhost:9092",
+//                "my-topic",
+//                new SimpleStringSchema());
 
 
 
@@ -209,7 +209,7 @@ public class Main5 {
 //                FlinkKafkaProducer011.Semantic.EXACTLY_ONCE);
 
 
-        stringSingleOutputStreamOperator.addSink(kafkaProducer011);
+//        stringSingleOutputStreamOperator.addSink(kafkaProducer011);
 
 
         env.execute("flink demo");
