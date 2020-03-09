@@ -1,6 +1,7 @@
 package cn.com.my;
 
 import cn.com.my.common.utils.ExecutionEnvUtil;
+import cn.com.my.common.utils.KafkaConfigUtil;
 import cn.com.my.hbase.HBaseWriter4J;
 import cn.com.my.hbase.ProcessFunction4J;
 import com.google.common.collect.Lists;
@@ -24,6 +25,7 @@ import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTime
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer011;
+import org.apache.flink.streaming.util.serialization.KeyedSerializationSchema;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableSchema;
@@ -34,11 +36,10 @@ import org.apache.flink.table.descriptors.Schema;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Collector;
-import org.apache.kafka.clients.producer.ProducerConfig;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
+
 
 @Slf4j
 public class Main5 {
@@ -181,6 +182,32 @@ public class Main5 {
                 "localhost:9092",
                 "my-topic",
                 new SimpleStringSchema());
+
+
+
+        //To be optimized
+//        Properties producerConfig = new Properties();
+//        FlinkKafkaProducer011<String> kafkaProducer011 = new FlinkKafkaProducer011(
+//                "my-topic",
+//                new KeyedSerializationSchema() {
+//                    @Override
+//                    public byte[] serializeKey(Object o) {
+//                        return new byte[0];
+//                    }
+//
+//                    @Override
+//                    public byte[] serializeValue(Object o) {
+//                        return new byte[0];
+//                    }
+//
+//                    @Override
+//                    public String getTargetTopic(Object o) {
+//                        return null;
+//                    }
+//                },
+//                producerConfig,
+//                FlinkKafkaProducer011.Semantic.EXACTLY_ONCE);
+
 
         stringSingleOutputStreamOperator.addSink(kafkaProducer011);
 
