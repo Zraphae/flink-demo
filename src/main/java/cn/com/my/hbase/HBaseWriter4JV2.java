@@ -2,7 +2,7 @@ package cn.com.my.hbase;
 
 import cn.com.my.common.model.OGGMessage;
 import cn.com.my.common.utils.GsonUtil;
-import com.google.common.base.Joiner;
+import cn.com.my.common.utils.HBaseUtils;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.Builder;
@@ -64,14 +64,8 @@ public class HBaseWriter4JV2 extends RichSinkFunction<List<OGGMessage>> implemen
         for (OGGMessage record : records) {
             JsonObject jsonObject = GsonUtil.parse2JsonObj(record.getData().toString());
 
-            String[] primaryKeys = primaryKeyName.split(",");
-            String[] keyValues = new String[primaryKeys.length];
-            for(int index=0; index<primaryKeys.length; index++){
-                String keyValue = jsonObject.get(primaryKeys[index]).getAsString();
-                keyValues[index] = keyValue;
-            }
-            String primaryKeyValue = Joiner.on("_").join(keyValues);
-            Put put = new Put(Bytes.toBytes(primaryKeyValue));
+            String hBaseRowKey = HBaseUtils.getHBaseRowKey(record, primaryKeyName);
+            Put put = new Put(Bytes.toBytes(hBaseRowKey));
 
             Set<Map.Entry<String, JsonElement>> entries = jsonObject.entrySet();
             for (Map.Entry<String, JsonElement> entry : entries) {

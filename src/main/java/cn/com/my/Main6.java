@@ -4,11 +4,10 @@ import cn.com.my.common.constant.PropertiesConstants;
 import cn.com.my.common.model.OGGMessage;
 import cn.com.my.common.schemas.OGGMessageSchema;
 import cn.com.my.common.utils.ExecutionEnvUtil;
-import cn.com.my.common.utils.GsonUtil;
+import cn.com.my.common.utils.HBaseUtils;
 import cn.com.my.hbase.HBaseWriter4JV2;
 import cn.com.my.hbase.ProcessFunction4JV2;
 import com.google.common.collect.Lists;
-import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
@@ -121,7 +120,7 @@ public class Main6 {
         SingleOutputStreamOperator<List<OGGMessage>> apply = stream.keyBy(new KeySelector<OGGMessage, String>() {
             @Override
             public String getKey(OGGMessage oggMessage) throws Exception {
-                return getHBaseRowKey(oggMessage, primaryKeyName);
+                return HBaseUtils.getHBaseRowKey(oggMessage, primaryKeyName);
             }
         }).window(TumblingProcessingTimeWindows.of(Time.seconds(flinkWindowDelay)))
                 .apply(new WindowFunction<OGGMessage, List<OGGMessage>, String, TimeWindow>() {
@@ -157,7 +156,7 @@ public class Main6 {
         SingleOutputStreamOperator<String> stringSingleOutputStreamOperator = process
                 .flatMap(new FlatMapFunction<List<String>, String>() {
                     @Override
-                    public void flatMap(List<String> value, Collector<String> out) throws Exception {
+                    public void flatMap(List<String> value, Collector<String> out) {
                         value.forEach(record -> out.collect(record));
                     }
                 });
@@ -166,7 +165,7 @@ public class Main6 {
         Properties writeKafkaPro = new Properties();
         writeKafkaPro.setProperty(PropertiesConstants.BOOTSTRAP_SERVERS, writeBootstrapServers);
         writeKafkaPro.setProperty(PropertiesConstants.GROUP_ID, writeGroupId);
-        writeKafkaPro.setProperty("transaction.timeout.ms",5 * 60 * 1000 + "");
+        writeKafkaPro.setProperty(PropertiesConstants.TRANSACTION_TIMEOUT_MS, 5 * 60 * 1000 + "");
         FlinkKafkaProducer flinkKafkaProducer = new FlinkKafkaProducer(
                 writeTopic,
                 new OGGMessageSchema(writeTopic),
@@ -176,11 +175,6 @@ public class Main6 {
         stringSingleOutputStreamOperator.addSink(flinkKafkaProducer);
 
         env.execute(appName);
-    }
-
-    private static String getHBaseRowKey(OGGMessage oggMessage, String primaryKeyName) {
-        JsonObject jsonObject = GsonUtil.parse2JsonObj(oggMessage.getData().toString());
-        return jsonObject.get(primaryKeyName).getAsString();
     }
 
 

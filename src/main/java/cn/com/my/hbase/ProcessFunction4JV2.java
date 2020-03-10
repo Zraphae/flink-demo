@@ -2,7 +2,7 @@ package cn.com.my.hbase;
 
 import cn.com.my.common.model.OGGMessage;
 import cn.com.my.common.utils.GsonUtil;
-import com.google.common.base.Joiner;
+import cn.com.my.common.utils.HBaseUtils;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
 import lombok.Builder;
@@ -57,16 +57,8 @@ public class ProcessFunction4JV2 extends ProcessFunction<List<OGGMessage>, List<
         List<String> kafkaMsgs = Lists.newArrayList();
         List<Get> gets = Lists.newArrayList();
         for (OGGMessage oggMessage : input) {
-            JsonObject jsonObject = GsonUtil.parse2JsonObj(oggMessage.getData().toString());
-            String[] primaryKeys = primaryKeyName.split(",");
-
-            String[] keyValues = new String[primaryKeys.length];
-            for(int index=0; index<primaryKeys.length; index++){
-                String keyValue = jsonObject.get(primaryKeys[index]).getAsString();
-                keyValues[index] = keyValue;
-            }
-            String primaryKeyValue = Joiner.on("_").join(keyValues);
-            Get get = new Get(Bytes.toBytes(primaryKeyValue));
+            String hBaseRowKey = HBaseUtils.getHBaseRowKey(oggMessage, primaryKeyName);
+            Get get = new Get(Bytes.toBytes(hBaseRowKey));
             gets.add(get);
         }
         Result[] results = this.table.get(gets);
