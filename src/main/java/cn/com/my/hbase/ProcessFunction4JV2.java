@@ -2,21 +2,19 @@ package cn.com.my.hbase;
 
 import cn.com.my.common.model.OGGMessage;
 import cn.com.my.common.utils.GsonUtil;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
-import org.apache.flink.types.Row;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -60,7 +58,14 @@ public class ProcessFunction4JV2 extends ProcessFunction<List<OGGMessage>, List<
         List<Get> gets = Lists.newArrayList();
         for (OGGMessage oggMessage : input) {
             JsonObject jsonObject = GsonUtil.parse2JsonObj(oggMessage.getData().toString());
-            String primaryKeyValue = jsonObject.get(this.primaryKeyName).getAsString();
+            String[] primaryKeys = primaryKeyName.split(",");
+
+            String[] keyValues = new String[primaryKeys.length];
+            for(int index=0; index<primaryKeys.length; index++){
+                String keyValue = jsonObject.get(primaryKeys[index]).getAsString();
+                keyValues[index] = keyValue;
+            }
+            String primaryKeyValue = Joiner.on("_").join(keyValues);
             Get get = new Get(Bytes.toBytes(primaryKeyValue));
             gets.add(get);
         }

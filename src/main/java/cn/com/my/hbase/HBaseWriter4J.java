@@ -106,8 +106,8 @@ public class HBaseWriter4J extends RichSinkFunction<List<Row>> implements SinkFu
 
     @Override
     public void close() throws Exception {
-        if (Objects.isNull(mutator)) mutator.close();
-        if (Objects.isNull(conn)) conn.close();
+        if (!Objects.isNull(mutator)) mutator.close();
+        if (!Objects.isNull(conn)) conn.close();
     }
 
 

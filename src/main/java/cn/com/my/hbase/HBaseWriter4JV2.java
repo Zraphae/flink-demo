@@ -2,6 +2,7 @@ package cn.com.my.hbase;
 
 import cn.com.my.common.model.OGGMessage;
 import cn.com.my.common.utils.GsonUtil;
+import com.google.common.base.Joiner;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.Builder;
@@ -10,7 +11,6 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
-import org.apache.flink.types.Row;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -63,8 +63,17 @@ public class HBaseWriter4JV2 extends RichSinkFunction<List<OGGMessage>> implemen
 
         for (OGGMessage record : records) {
             JsonObject jsonObject = GsonUtil.parse2JsonObj(record.getData().toString());
+
+            String[] primaryKeys = primaryKeyName.split(",");
+            String[] keyValues = new String[primaryKeys.length];
+            for(int index=0; index<primaryKeys.length; index++){
+                String keyValue = jsonObject.get(primaryKeys[index]).getAsString();
+                keyValues[index] = keyValue;
+            }
+            String primaryKeyValue = Joiner.on("_").join(keyValues);
+            Put put = new Put(Bytes.toBytes(primaryKeyValue));
+
             Set<Map.Entry<String, JsonElement>> entries = jsonObject.entrySet();
-            Put put = new Put(Bytes.toBytes(jsonObject.get(primaryKeyName).getAsString()));
             for (Map.Entry<String, JsonElement> entry : entries) {
                 put.addColumn(Bytes.toBytes(this.family), Bytes.toBytes(entry.getKey()),Bytes.toBytes(entry.getValue().getAsString()));
             }
@@ -77,8 +86,8 @@ public class HBaseWriter4JV2 extends RichSinkFunction<List<OGGMessage>> implemen
 
     @Override
     public void close() throws Exception {
-        if (Objects.isNull(mutator)) mutator.close();
-        if (Objects.isNull(conn)) conn.close();
+        if (!Objects.isNull(mutator)) mutator.close();
+        if (!Objects.isNull(conn)) conn.close();
     }
 
 

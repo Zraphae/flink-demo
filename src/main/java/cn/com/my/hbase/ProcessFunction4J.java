@@ -12,7 +12,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
-import org.apache.hadoop.hbase.util.Bytes;
 
 import java.util.List;
 import java.util.Objects;
@@ -63,8 +62,8 @@ public class ProcessFunction4J extends ProcessFunction<List<Row>, List<String>> 
 
     @Override
     public void close() throws Exception {
-        if (Objects.isNull(table)) table.close();
-        if (Objects.isNull(conn)) conn.close();
+        if (!Objects.isNull(table)) table.close();
+        if (!Objects.isNull(conn)) conn.close();
     }
 
 
