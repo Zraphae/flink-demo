@@ -4,6 +4,8 @@ package cn.com.my.common.constant;
 
 public class PropertiesConstants {
 
+    public static final String BOOTSTRAP_SERVERS = "bootstrap.servers";
+    public static final String GROUP_ID = "group.id";
     public static final String KAFKA_BROKERS = "kafka.brokers";
     public static final String DEFAULT_KAFKA_BROKERS = "localhost:9092";
     public static final String KAFKA_ZOOKEEPER_CONNECT = "kafka.zookeeper.connect";

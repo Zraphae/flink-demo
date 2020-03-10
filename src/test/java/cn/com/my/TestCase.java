@@ -201,7 +201,7 @@ public class TestCase {
         String json = GsonUtil.toJson(message);
         log.info("==>jsonStr: {}", json);
 
-        JsonObject jsonObject = GsonUtil.parse2JsonObj(message.getData());
+        JsonObject jsonObject = GsonUtil.parse2JsonObj(message.getData().toString());
         log.info("==>dataJsonObject: {}", jsonObject);
 
         Set<Map.Entry<String, JsonElement>> entries = jsonObject.entrySet();
@@ -209,4 +209,21 @@ public class TestCase {
                 log.info("element.key: {}, element.value: {}", element.getKey(), element.getValue().getAsString()));
 
     }
+
+    @Test
+    public void testOGGMessage() {
+
+        String json = "{\"table\":\"test\",\"pos\":\"13123123123\",\"data\":{\"is_hit\":\"N\",\"seq_no \":\"123878646264264\"},\"op_type\":\"U\",\"op_ts\":\"2020-02-26 02:31:31\"}";
+        log.info("==>jsonStr: {}", json);
+        OGGMessage oggMessage = GsonUtil.fromJson(json, OGGMessage.class);
+        log.info("----->: {}", oggMessage);
+
+    }
+
+    @Test
+    public void test() {
+
+    }
+
+
 }

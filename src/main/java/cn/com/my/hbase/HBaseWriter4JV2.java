@@ -33,6 +33,7 @@ public class HBaseWriter4JV2 extends RichSinkFunction<List<OGGMessage>> implemen
     private Connection conn;
     private BufferedMutator mutator;
     private String family;
+    private String primaryKeyName;
 
 
     @Override
@@ -61,9 +62,9 @@ public class HBaseWriter4JV2 extends RichSinkFunction<List<OGGMessage>> implemen
         }
 
         for (OGGMessage record : records) {
-            JsonObject jsonObject = GsonUtil.parse2JsonObj(record.getData());
+            JsonObject jsonObject = GsonUtil.parse2JsonObj(record.getData().toString());
             Set<Map.Entry<String, JsonElement>> entries = jsonObject.entrySet();
-            Put put = new Put(Bytes.toBytes(record.getKey()));
+            Put put = new Put(Bytes.toBytes(jsonObject.get(primaryKeyName).getAsString()));
             for (Map.Entry<String, JsonElement> entry : entries) {
                 put.addColumn(Bytes.toBytes(this.family), Bytes.toBytes(entry.getKey()),Bytes.toBytes(entry.getValue().getAsString()));
             }

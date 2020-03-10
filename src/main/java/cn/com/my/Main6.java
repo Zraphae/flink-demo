@@ -1,15 +1,17 @@
 package cn.com.my;
 
+import cn.com.my.common.constant.PropertiesConstants;
 import cn.com.my.common.model.OGGMessage;
+import cn.com.my.common.schemas.OGGMessageSchema;
 import cn.com.my.common.utils.ExecutionEnvUtil;
+import cn.com.my.common.utils.GsonUtil;
 import cn.com.my.hbase.HBaseWriter4JV2;
 import cn.com.my.hbase.ProcessFunction4JV2;
-import cn.com.my.kafka.OGGMessageDeserializationSchema;
 import com.google.common.collect.Lists;
+import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
-import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.contrib.streaming.state.RocksDBStateBackend;
@@ -25,7 +27,6 @@ import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
-import org.apache.flink.streaming.connectors.kafka.KafkaSerializationSchema;
 import org.apache.flink.table.api.java.StreamTableEnvironment;
 import org.apache.flink.util.Collector;
 
@@ -42,21 +43,47 @@ public class Main6 {
 
         // Read parameters from command line
         final ParameterTool params = ParameterTool.fromArgs(args);
-//
-//        if (params.getNumberOfParameters() < 4) {
-//            log.info("\nUsage: FlinkReadKafka " +
-//                    "--read-topic <topic> " +
-//                    "--write-topic <topic> " +
-//                    "--bootstrap.servers <kafka brokers> " +
-//                    "--group.id <groupid>");
+
+//        if (params.getNumberOfParameters() < 13) {
+//            log.info("\nUsage: FlinkKafka " +
+//                    "--app.name <appName> " +
+//                    "--read-topic <readTopic> " +
+//                    "--write-topic <writeTopic> " +
+//                    "--read.bootstrap.servers <readBootstrapServers> " +
+//                    "--write.bootstrap.servers <writeBootstrapServers> " +
+//                    "--read.group.id <readGroupId> " +
+//                    "--write.group.id <writeGroupId> " +
+//                    "--hbase.zookeeper.quorum <hbaseZkQuorum> " +
+//                    "--hbase.zookeeper.client.port <hbaseZookeeperClientPort> " +
+//                    "--hbase.table.name <hbaseTableName> " +
+//                    "--hbase.family.name <hbaseFamilyName> " +
+//                    "--primary.key.name <primaryKeyName> " +
+//                    "--flink.window.delay <flinkWindowDelay>");
 //            return;
 //        }
+
+        String appName = params.get("app.name", "test");
+        String readTopic = params.get("read.topic", "test");
+        String writeTopic = params.get("write.topic", "my-topic");
+        String readBootstrapServers = params.get("read.bootstrap.servers", "localhost:9092");
+        String writeBootstrapServers = params.get("write.bootstrap.servers", "localhost:9092");
+        String readGroupId = params.get("read.group.id", "test");
+        String writeGroupId = params.get("write.group.id", "test");
+        String hbaseZkQuorum = params.get("hbase.zookeeper.quorum", "localhost");
+        String hbaseZookeeperClientPort = params.get("hbase.zookeeper.client.port", "2181");
+        String hbaseTableName = params.get("hbase.table.name", "test");
+        String hbaseFamilyName = params.get("hbase.family.name", "info");
+        String primaryKeyName = params.get("primary.key.name", "seq_no");
+        int flinkWindowDelay = params.getInt("flink.window.delay", 20);
+
+
         StreamExecutionEnvironment env = ExecutionEnvUtil.prepare(params);
 
         // start a checkpoint every 5000 ms
-        env.enableCheckpointing(5000);
+        env.enableCheckpointing(5 * 1000L);
 
-        env.setStateBackend((StateBackend) new RocksDBStateBackend(FLINK_CHECKPOINT_PATH, true));
+        String appCheckpointPath = FLINK_CHECKPOINT_PATH + "/" + appName;
+        env.setStateBackend((StateBackend) new RocksDBStateBackend(appCheckpointPath, true));
         // set mode to exactly-once (this is the default)
         env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
 
@@ -78,56 +105,54 @@ public class Main6 {
         env.getConfig()
                 .setRestartStrategy(RestartStrategies.fixedDelayRestart(4, 10 * 1000L));
 
-        StreamTableEnvironment tEnv = StreamTableEnvironment.create(env);
-
-
-        Properties properties = new Properties();
-        properties.setProperty("bootstrap.servers", "localhost:9092");
-        properties.setProperty("group.id", "test");
+        Properties readKafkaPro = new Properties();
+        readKafkaPro.setProperty(PropertiesConstants.BOOTSTRAP_SERVERS, readBootstrapServers);
+        readKafkaPro.setProperty(PropertiesConstants.GROUP_ID, readGroupId);
         FlinkKafkaConsumer<OGGMessage> flinkKafkaConsumer = new FlinkKafkaConsumer<>(
-                "test",
-                new OGGMessageDeserializationSchema(),
-                properties);
-        flinkKafkaConsumer.setStartFromGroupOffsets();
+                readTopic,
+                new OGGMessageSchema(),
+                readKafkaPro);
+//        flinkKafkaConsumer.setStartFromGroupOffsets();
+        flinkKafkaConsumer.setStartFromLatest();  //for test
 
         DataStream<OGGMessage> stream = env.addSource(flinkKafkaConsumer);
-
-        if (log.isDebugEnabled()) {
-            stream.print();
-        }
-        stream.print();
+//        stream.print();
 
         SingleOutputStreamOperator<List<OGGMessage>> apply = stream.keyBy(new KeySelector<OGGMessage, String>() {
             @Override
-            public String getKey(OGGMessage value) throws Exception {
-                return value.getKey();
+            public String getKey(OGGMessage oggMessage) throws Exception {
+                return getHBaseRowKey(oggMessage, primaryKeyName);
             }
-        }).window(TumblingProcessingTimeWindows.of(Time.seconds(10)))
+        }).window(TumblingProcessingTimeWindows.of(Time.seconds(flinkWindowDelay)))
                 .apply(new WindowFunction<OGGMessage, List<OGGMessage>, String, TimeWindow>() {
                     @Override
-                    public void apply(String s, TimeWindow window, Iterable<OGGMessage> input, Collector<List<OGGMessage>> out) {
+                    public void apply(String s, TimeWindow window, Iterable<OGGMessage> input,
+                                      Collector<List<OGGMessage>> out) {
                         List<OGGMessage> oggMessages = Lists.newArrayList();
                         input.forEach(oggMessage -> oggMessages.add(oggMessage));
                         out.collect(oggMessages);
                     }
                 });
+//        apply.print();
 
         HBaseWriter4JV2 hBaseWriter = HBaseWriter4JV2.builder()
-                .hbaseZookeeperQuorum("localhost")
-                .hbaseZookeeperClientPort("2181")
-                .tableNameStr("test")
-                .family("info")
+                .hbaseZookeeperQuorum(hbaseZkQuorum)
+                .hbaseZookeeperClientPort(hbaseZookeeperClientPort)
+                .tableNameStr(hbaseTableName)
+                .family(hbaseFamilyName)
+                .primaryKeyName(primaryKeyName)
                 .build();
         apply.addSink(hBaseWriter);
 
         ProcessFunction4JV2 processFunction = ProcessFunction4JV2.builder()
-                .hbaseZookeeperQuorum("localhost")
-                .hbaseZookeeperClientPort("2181")
-                .tableNameStr("test")
-                .family("info")
+                .hbaseZookeeperQuorum(hbaseZkQuorum)
+                .hbaseZookeeperClientPort(hbaseZookeeperClientPort)
+                .tableNameStr(hbaseTableName)
+                .family(hbaseFamilyName)
+                .primaryKeyName(primaryKeyName)
                 .build();
         SingleOutputStreamOperator<List<String>> process = apply.process(processFunction);
-        process.print();
+//        process.print();
 
         SingleOutputStreamOperator<String> stringSingleOutputStreamOperator = process
                 .flatMap(new FlatMapFunction<List<String>, String>() {
@@ -138,16 +163,24 @@ public class Main6 {
                 });
         stringSingleOutputStreamOperator.print();
 
-        Properties properties1 = new Properties();
+        Properties writeKafkaPro = new Properties();
+        writeKafkaPro.setProperty(PropertiesConstants.BOOTSTRAP_SERVERS, writeBootstrapServers);
+        writeKafkaPro.setProperty(PropertiesConstants.GROUP_ID, writeGroupId);
+        writeKafkaPro.setProperty("transaction.timeout.ms",5 * 60 * 1000 + "");
         FlinkKafkaProducer flinkKafkaProducer = new FlinkKafkaProducer(
-                "my-topic",
-                (KafkaSerializationSchema) new SimpleStringSchema(),
-                properties1,
+                writeTopic,
+                new OGGMessageSchema(writeTopic),
+                writeKafkaPro,
                 FlinkKafkaProducer.Semantic.EXACTLY_ONCE);
 
         stringSingleOutputStreamOperator.addSink(flinkKafkaProducer);
 
-        env.execute("flink demo");
+        env.execute(appName);
+    }
+
+    private static String getHBaseRowKey(OGGMessage oggMessage, String primaryKeyName) {
+        JsonObject jsonObject = GsonUtil.parse2JsonObj(oggMessage.getData().toString());
+        return jsonObject.get(primaryKeyName).getAsString();
     }
 
 

@@ -1,6 +1,7 @@
 package cn.com.my.hbase;
 
 import cn.com.my.common.model.OGGMessage;
+import cn.com.my.common.utils.GsonUtil;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
 import lombok.Builder;
@@ -10,10 +11,8 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Collector;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.flink.util.Preconditions;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -29,10 +28,10 @@ public class ProcessFunction4JV2 extends ProcessFunction<List<OGGMessage>, List<
     private String tableNameStr;
     private String hbaseZookeeperQuorum;
     private String hbaseZookeeperClientPort;
-
     private Connection conn;
     private Table table;
     private String family;
+    private String primaryKeyName;
 
 
     @Override
@@ -60,28 +59,35 @@ public class ProcessFunction4JV2 extends ProcessFunction<List<OGGMessage>, List<
         List<String> kafkaMsgs = Lists.newArrayList();
         List<Get> gets = Lists.newArrayList();
         for (OGGMessage oggMessage : input) {
-            Get get = new Get(Bytes.toBytes(oggMessage.getKey()));
+            JsonObject jsonObject = GsonUtil.parse2JsonObj(oggMessage.getData().toString());
+            String primaryKeyValue = jsonObject.get(this.primaryKeyName).getAsString();
+            Get get = new Get(Bytes.toBytes(primaryKeyValue));
             gets.add(get);
-
         }
         Result[] results = this.table.get(gets);
-        for (Result result : results) {
-            List<Cell> cells = result.listCells();
+
+        Preconditions.checkArgument(input.size() == results.length, "input.size() != results.length");
+
+        for(int index=0; index<results.length; index++){
+            List<Cell> cells = results[index].listCells();
             JsonObject jsonObject = new JsonObject();
             for (Cell cell : cells) {
-                String key = Bytes.toString(cell.getQualifierArray());
-                String value = Bytes.toString(cell.getValueArray());
+                String key = Bytes.toString(CellUtil.cloneQualifier(cell));
+                String value = Bytes.toString(CellUtil.cloneValue(cell));
                 jsonObject.addProperty(key, value);
             }
-            kafkaMsgs.add(jsonObject.toString());
+            OGGMessage oggMessage = input.get(index);
+            oggMessage.setData(jsonObject.toString());
+            kafkaMsgs.add(GsonUtil.toJson(oggMessage));
         }
+
         out.collect(kafkaMsgs);
     }
 
     @Override
     public void close() throws Exception {
-        if (Objects.isNull(table)) table.close();
-        if (Objects.isNull(conn)) conn.close();
+        if (!Objects.isNull(table)) table.close();
+        if (!Objects.isNull(conn)) conn.close();
     }
 
 
