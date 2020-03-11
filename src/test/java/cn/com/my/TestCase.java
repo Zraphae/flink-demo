@@ -1,11 +1,11 @@
 package cn.com.my;
 
 import cn.com.my.common.model.OGGMessage;
+import cn.com.my.common.utils.DateUtil;
 import cn.com.my.common.utils.GsonUtil;
 import cn.com.my.common.utils.OrcBatchReader;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.beanutils.DynaBean;
 import org.apache.commons.beanutils.LazyDynaBean;
@@ -24,10 +24,7 @@ import org.apache.orc.TypeDescription;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 
 @Slf4j
@@ -195,13 +192,13 @@ public class TestCase {
                 .opType("I")
                 .opTs("2020-02-26 02:31:31")
                 .pos("13123123123")
-                .data("{\"is_hit\":\"N\",\"seq_no\":\"123878646264264\"}")
+                .after("{\"is_hit\":\"N\",\"seq_no\":\"123878646264264\"}")
                 .build();
 
         String json = GsonUtil.toJson(message);
         log.info("==>jsonStr: {}", json);
 
-        JsonObject jsonObject = GsonUtil.parse2JsonObj(message.getData().toString());
+        JsonObject jsonObject = GsonUtil.parse2JsonObj(message.getAfter().toString());
         log.info("==>dataJsonObject: {}", jsonObject);
 
         Set<Map.Entry<String, JsonElement>> entries = jsonObject.entrySet();
@@ -223,6 +220,7 @@ public class TestCase {
     @Test
     public void test() {
 
+        log.info("===>{}", String.valueOf(5));
     }
 
 

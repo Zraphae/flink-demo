@@ -14,16 +14,23 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OGGMessage {
 
-    private String table;
-    private String pos;
-    private Object data;
+    private long offset;
+    private String topicName;
+    private int partition;
+    private String key;
+
     @SerializedName("op_type")
     private String opType;
     @SerializedName("op_ts")
     private String opTs;
+    @SerializedName("current_ts")
+    private String currentTs;
 
-    private long offset;
-    private String topic;
-    private int partition;
-    private String key;
+    private String table;
+    private String pos;
+
+    private Object before;
+    private Object after;
+
+
 }

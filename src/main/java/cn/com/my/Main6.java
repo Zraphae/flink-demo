@@ -4,13 +4,13 @@ import cn.com.my.common.constant.PropertiesConstants;
 import cn.com.my.common.model.OGGMessage;
 import cn.com.my.common.schemas.OGGMessageSchema;
 import cn.com.my.common.utils.ExecutionEnvUtil;
-import cn.com.my.common.utils.HBaseUtils;
 import cn.com.my.hbase.HBaseWriter4JV2;
 import cn.com.my.hbase.ProcessFunction4JV2;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
+import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.contrib.streaming.state.RocksDBStateBackend;
@@ -26,7 +26,6 @@ import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
-import org.apache.flink.table.api.java.StreamTableEnvironment;
 import org.apache.flink.util.Collector;
 
 import java.util.List;
@@ -117,12 +116,10 @@ public class Main6 {
         DataStream<OGGMessage> stream = env.addSource(flinkKafkaConsumer);
 //        stream.print();
 
-        SingleOutputStreamOperator<List<OGGMessage>> apply = stream.keyBy(new KeySelector<OGGMessage, String>() {
-            @Override
-            public String getKey(OGGMessage oggMessage) throws Exception {
-                return HBaseUtils.getHBaseRowKey(oggMessage, primaryKeyName);
-            }
-        }).window(TumblingProcessingTimeWindows.of(Time.seconds(flinkWindowDelay)))
+
+        SingleOutputStreamOperator<List<OGGMessage>> apply = stream.keyBy((KeySelector<OGGMessage, String>) oggMessage ->
+                String.valueOf(oggMessage.getPartition())
+        ).window(TumblingProcessingTimeWindows.of(Time.seconds(flinkWindowDelay)))
                 .apply(new WindowFunction<OGGMessage, List<OGGMessage>, String, TimeWindow>() {
                     @Override
                     public void apply(String s, TimeWindow window, Iterable<OGGMessage> input,
@@ -154,18 +151,15 @@ public class Main6 {
 //        process.print();
 
         SingleOutputStreamOperator<String> stringSingleOutputStreamOperator = process
-                .flatMap(new FlatMapFunction<List<String>, String>() {
-                    @Override
-                    public void flatMap(List<String> value, Collector<String> out) {
-                        value.forEach(record -> out.collect(record));
-                    }
-                });
+                .flatMap((FlatMapFunction<List<String>, String>) (value, out) ->
+                        value.forEach(record -> out.collect(record)))
+                .returns(Types.STRING);
         stringSingleOutputStreamOperator.print();
 
         Properties writeKafkaPro = new Properties();
         writeKafkaPro.setProperty(PropertiesConstants.BOOTSTRAP_SERVERS, writeBootstrapServers);
         writeKafkaPro.setProperty(PropertiesConstants.GROUP_ID, writeGroupId);
-        writeKafkaPro.setProperty(PropertiesConstants.TRANSACTION_TIMEOUT_MS, 5 * 60 * 1000 + "");
+        writeKafkaPro.setProperty(PropertiesConstants.TRANSACTION_TIMEOUT_MS, String.valueOf(5 * 60 * 1000));
         FlinkKafkaProducer flinkKafkaProducer = new FlinkKafkaProducer(
                 writeTopic,
                 new OGGMessageSchema(writeTopic),

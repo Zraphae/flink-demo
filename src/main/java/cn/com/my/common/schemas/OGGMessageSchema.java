@@ -41,19 +41,21 @@ public class OGGMessageSchema implements KafkaDeserializationSchema<OGGMessage>,
         byte[] key = record.key();
         OGGMessage oggMessage = new OGGMessage();
         if (!Objects.isNull(value)) {
+            String jsonStr = new String(value, StandardCharsets.UTF_8);
             if (log.isDebugEnabled()) {
-                log.debug("=====>json: {}", new String(value, StandardCharsets.UTF_8));
+                log.debug("=====>json: {}", jsonStr);
             }
-            oggMessage = GsonUtil.fromJson(new String(value, StandardCharsets.UTF_8), OGGMessage.class);
+            oggMessage = GsonUtil.fromJson(jsonStr, OGGMessage.class);
             oggMessage.setOffset(record.offset());
-            oggMessage.setTopic(record.topic());
+            oggMessage.setTopicName(record.topic());
             oggMessage.setPartition(record.partition());
         }
         if (!Objects.isNull(key)) {
+            String keyStr = new String(key, StandardCharsets.UTF_8);
             if (log.isDebugEnabled()) {
-                log.debug("=====>key: {}", new String(key, StandardCharsets.UTF_8));
+                log.debug("=====>key: {}", keyStr);
             }
-            oggMessage.setKey(new String(key, StandardCharsets.UTF_8));
+            oggMessage.setKey(keyStr);
         }
 
         return oggMessage;

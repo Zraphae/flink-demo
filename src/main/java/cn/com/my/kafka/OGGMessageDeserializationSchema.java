@@ -33,7 +33,7 @@ public class OGGMessageDeserializationSchema implements KafkaDeserializationSche
                 }
                 oggMessage = GsonUtil.fromJson(new String(value, Charset.forName("UTF-8")), OGGMessage.class);
                 oggMessage.setOffset(record.offset());
-                oggMessage.setTopic(record.topic());
+                oggMessage.setTopicName(record.topic());
                 oggMessage.setPartition(record.partition());
             }
             if (!Objects.isNull(key)) {

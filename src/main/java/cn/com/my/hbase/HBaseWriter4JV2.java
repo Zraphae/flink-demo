@@ -1,5 +1,6 @@
 package cn.com.my.hbase;
 
+import cn.com.my.common.constant.OGGOpType;
 import cn.com.my.common.model.OGGMessage;
 import cn.com.my.common.utils.GsonUtil;
 import cn.com.my.common.utils.HBaseUtils;
@@ -7,6 +8,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
@@ -62,14 +64,22 @@ public class HBaseWriter4JV2 extends RichSinkFunction<List<OGGMessage>> implemen
         }
 
         for (OGGMessage record : records) {
-            JsonObject jsonObject = GsonUtil.parse2JsonObj(record.getData().toString());
 
             String hBaseRowKey = HBaseUtils.getHBaseRowKey(record, primaryKeyName);
             Put put = new Put(Bytes.toBytes(hBaseRowKey));
 
+            JsonObject jsonObject;
+            if(StringUtils.equals(OGGOpType.DELETE.getValue(), record.getOpType())) {
+                jsonObject = GsonUtil.parse2JsonObj(record.getBefore().toString());
+                jsonObject.addProperty(HBaseUtils.DELETE_FLAG, true);
+            }else {
+                jsonObject = GsonUtil.parse2JsonObj(record.getAfter().toString());
+            }
             Set<Map.Entry<String, JsonElement>> entries = jsonObject.entrySet();
             for (Map.Entry<String, JsonElement> entry : entries) {
-                put.addColumn(Bytes.toBytes(this.family), Bytes.toBytes(entry.getKey()),Bytes.toBytes(entry.getValue().getAsString()));
+                put.addColumn(Bytes.toBytes(this.family),
+                        Bytes.toBytes(entry.getKey()),
+                        Bytes.toBytes(entry.getValue().getAsString()));
             }
             this.mutator.mutate(put);
         }

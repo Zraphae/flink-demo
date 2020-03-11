@@ -1,7 +1,7 @@
 package cn.com.my.hbase;
 
 import cn.com.my.common.model.OGGMessage;
-import cn.com.my.common.utils.GsonUtil;
+import cn.com.my.common.utils.DateUtil;
 import cn.com.my.common.utils.HBaseUtils;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
@@ -15,6 +15,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -57,6 +58,7 @@ public class ProcessFunction4JV2 extends ProcessFunction<List<OGGMessage>, List<
         List<String> kafkaMsgs = Lists.newArrayList();
         List<Get> gets = Lists.newArrayList();
         for (OGGMessage oggMessage : input) {
+
             String hBaseRowKey = HBaseUtils.getHBaseRowKey(oggMessage, primaryKeyName);
             Get get = new Get(Bytes.toBytes(hBaseRowKey));
             gets.add(get);
@@ -73,9 +75,15 @@ public class ProcessFunction4JV2 extends ProcessFunction<List<OGGMessage>, List<
                 String value = Bytes.toString(CellUtil.cloneValue(cell));
                 jsonObject.addProperty(key, value);
             }
+
             OGGMessage oggMessage = input.get(index);
-            oggMessage.setData(jsonObject.toString());
-            kafkaMsgs.add(GsonUtil.toJson(oggMessage));
+            jsonObject.addProperty("op_topic", oggMessage.getTopicName());
+            jsonObject.addProperty("op_key", oggMessage.getKey());
+            jsonObject.addProperty("op_offset", String.valueOf(oggMessage.getOffset()));
+            jsonObject.addProperty("op_partition", String.valueOf(oggMessage.getPartition()));
+            jsonObject.addProperty("op_time", DateUtil.format(new Date(), DateUtil.YYYY_MM_DD_HH_MM_SS));
+
+            kafkaMsgs.add(jsonObject.toString());
         }
 
         out.collect(kafkaMsgs);
