@@ -80,7 +80,7 @@ public class Main6 {
         // start a checkpoint every 5000 ms
         env.enableCheckpointing(5 * 1000L);
 
-        String appCheckpointPath = FLINK_CHECKPOINT_PATH + "/" + appName;
+        String appCheckpointPath = FLINK_CHECKPOINT_PATH + "/" + readTopic;
         env.setStateBackend((StateBackend) new RocksDBStateBackend(appCheckpointPath, true));
         // set mode to exactly-once (this is the default)
         env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
