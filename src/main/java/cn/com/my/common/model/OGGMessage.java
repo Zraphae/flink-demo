@@ -1,11 +1,15 @@
 package cn.com.my.common.model;
 
 
+import cn.com.my.common.constant.OGGOpType;
 import com.google.gson.annotations.SerializedName;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+
+import java.util.Map;
 
 
 @Data
@@ -29,8 +33,14 @@ public class OGGMessage {
     private String table;
     private String pos;
 
-    private Object before;
-    private Object after;
+    private Map<String, String> before;
+    private Map<String, String> after;
 
 
+    public Map<String, String> getKeyValues() {
+        if (StringUtils.equals(OGGOpType.DELETE.getValue(), this.getOpType())) {
+            return this.before;
+        }
+        return this.after;
+    }
 }

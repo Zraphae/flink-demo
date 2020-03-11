@@ -5,7 +5,7 @@ import cn.com.my.common.model.OGGMessage;
 import cn.com.my.common.schemas.OGGMessageSchema;
 import cn.com.my.common.utils.ExecutionEnvUtil;
 import cn.com.my.hbase.HBaseWriter4JV2;
-import cn.com.my.hbase.ProcessFunction4JV2;
+import cn.com.my.hbase.ProcessFunction4JV3;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.functions.FlatMapFunction;
@@ -110,12 +110,11 @@ public class Main6 {
                 readTopic,
                 new OGGMessageSchema(),
                 readKafkaPro);
-        flinkKafkaConsumer.setStartFromGroupOffsets();
-//        flinkKafkaConsumer.setStartFromLatest();  //for test
+//        flinkKafkaConsumer.setStartFromGroupOffsets();
+        flinkKafkaConsumer.setStartFromLatest();  //for test
 
         DataStream<OGGMessage> stream = env.addSource(flinkKafkaConsumer);
 //        stream.print();
-
 
         SingleOutputStreamOperator<List<OGGMessage>> apply = stream.keyBy((KeySelector<OGGMessage, String>) oggMessage ->
                 String.valueOf(oggMessage.getPartition())
@@ -140,13 +139,7 @@ public class Main6 {
                 .build();
         apply.addSink(hBaseWriter);
 
-        ProcessFunction4JV2 processFunction = ProcessFunction4JV2.builder()
-                .hbaseZookeeperQuorum(hbaseZkQuorum)
-                .hbaseZookeeperClientPort(hbaseZookeeperClientPort)
-                .tableNameStr(hbaseTableName)
-                .family(hbaseFamilyName)
-                .primaryKeyName(primaryKeyName)
-                .build();
+        ProcessFunction4JV3 processFunction = ProcessFunction4JV3.builder().build();
         SingleOutputStreamOperator<List<String>> process = apply.process(processFunction);
 //        process.print();
 

@@ -1,7 +1,6 @@
 package cn.com.my;
 
 import cn.com.my.common.model.OGGMessage;
-import cn.com.my.common.utils.DateUtil;
 import cn.com.my.common.utils.GsonUtil;
 import cn.com.my.common.utils.OrcBatchReader;
 import com.google.gson.JsonElement;
@@ -184,29 +183,6 @@ public class TestCase {
 
     }
 
-
-    @Test
-    public void testOGGMessageParse() {
-        OGGMessage message = OGGMessage.builder()
-                .table("test")
-                .opType("I")
-                .opTs("2020-02-26 02:31:31")
-                .pos("13123123123")
-                .after("{\"is_hit\":\"N\",\"seq_no\":\"123878646264264\"}")
-                .build();
-
-        String json = GsonUtil.toJson(message);
-        log.info("==>jsonStr: {}", json);
-
-        JsonObject jsonObject = GsonUtil.parse2JsonObj(message.getAfter().toString());
-        log.info("==>dataJsonObject: {}", jsonObject);
-
-        Set<Map.Entry<String, JsonElement>> entries = jsonObject.entrySet();
-        entries.forEach(element ->
-                log.info("element.key: {}, element.value: {}", element.getKey(), element.getValue().getAsString()));
-
-    }
-
     @Test
     public void testOGGMessage() {
 
@@ -219,8 +195,15 @@ public class TestCase {
 
     @Test
     public void test() {
+        String str = "{\"table\":\"test\",\"pos\":\"13123123123\",\"after\":{\"is_hit4\":\"\",\"seq_no\":\"1234567\"},\"op_type\":\"U\",\"op_ts\":\"2020-02-26 02:31:31\"}";
+        OGGMessage oggMessage = GsonUtil.fromJson(str, OGGMessage.class);
+        log.info("===>{}", oggMessage.getAfter());
 
-        log.info("===>{}", String.valueOf(5));
+        Set<Map.Entry<String, String>> entries = oggMessage.getAfter().entrySet();
+        entries.forEach(entrie -> {
+            log.info("key: {}, value: {}", entrie.getKey(), entrie.getValue());
+        });
+
     }
 
 

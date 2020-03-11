@@ -36,7 +36,7 @@ public class OGGMessageSchema implements KafkaDeserializationSchema<OGGMessage>,
     public ProducerRecord<byte[], byte[]> serialize(String element, @Nullable Long timestamp) {
         byte[] keyBytes = null;
         if (!StringUtils.isBlank(primaryKey)) {
-            JsonObject jsonObject = GsonUtil.parse2JsonObj(element);
+            JsonObject jsonObject = GsonUtil.fromJson(element, JsonObject.class);
             String primaryValues = HBaseUtils.getPrimaryValues(primaryKey, jsonObject);
             keyBytes = primaryValues.getBytes(StandardCharsets.UTF_8);
         }

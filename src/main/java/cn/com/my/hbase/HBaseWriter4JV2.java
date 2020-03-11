@@ -68,19 +68,23 @@ public class HBaseWriter4JV2 extends RichSinkFunction<List<OGGMessage>> implemen
             String hBaseRowKey = HBaseUtils.getHBaseRowKey(record, primaryKeyName);
             Put put = new Put(Bytes.toBytes(hBaseRowKey));
 
-            JsonObject jsonObject;
-            if(StringUtils.equals(OGGOpType.DELETE.getValue(), record.getOpType())) {
-                jsonObject = GsonUtil.parse2JsonObj(record.getBefore().toString());
-                jsonObject.addProperty(HBaseUtils.DELETE_FLAG, true);
-            }else {
-                jsonObject = GsonUtil.parse2JsonObj(record.getAfter().toString());
-            }
-            Set<Map.Entry<String, JsonElement>> entries = jsonObject.entrySet();
-            for (Map.Entry<String, JsonElement> entry : entries) {
+            if (StringUtils.equals(OGGOpType.DELETE.getValue(), record.getOpType())) {
                 put.addColumn(Bytes.toBytes(this.family),
-                        Bytes.toBytes(entry.getKey()),
-                        Bytes.toBytes(entry.getValue().getAsString()));
+                        Bytes.toBytes(HBaseUtils.DELETE_FLAG),
+                        Bytes.toBytes(String.valueOf(true)));
             }
+            Map<String, String> keyValues = record.getKeyValues();
+            keyValues.entrySet().forEach(entry -> {
+                String key = entry.getKey();
+                String value = entry.getValue();
+                if (StringUtils.isBlank(value)) {
+                    value = HBaseUtils.NULL_STRING;
+                }
+                put.addColumn(Bytes.toBytes(this.family),
+                        Bytes.toBytes(key),
+                        Bytes.toBytes(value));
+            });
+
             this.mutator.mutate(put);
         }
         this.mutator.flush();

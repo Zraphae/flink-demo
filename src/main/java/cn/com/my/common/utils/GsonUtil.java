@@ -1,8 +1,6 @@
 package cn.com.my.common.utils;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
@@ -18,8 +16,7 @@ public class GsonUtil {
 
     private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
-    private final static Gson gson = new Gson();
-    private final static JsonParser jsonParser = new JsonParser();
+    private final static Gson gson = new GsonBuilder().create();
 
     public static <T> T fromJson(String value, Class<T> type) {
         return gson.fromJson(value, type);
@@ -73,7 +70,4 @@ public class GsonUtil {
         return result.toString().getBytes(DEFAULT_CHARSET);
     }
 
-    public static JsonObject parse2JsonObj(String jsonStr) {
-        return jsonParser.parse(jsonStr).getAsJsonObject();
-    }
 }
