@@ -9,13 +9,14 @@ import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.types.Row;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 
 @Slf4j
 public class GsonUtil {
 
-    private static final Charset DEFAULT_CHARSET = Charset.forName("UTF-8");
+    private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
     private final static Gson gson = new Gson();
     private final static JsonParser jsonParser = new JsonParser();

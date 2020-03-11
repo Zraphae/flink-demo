@@ -8,7 +8,7 @@ import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.streaming.connectors.kafka.KafkaDeserializationSchema;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 @Deprecated
@@ -29,18 +29,18 @@ public class OGGMessageDeserializationSchema implements KafkaDeserializationSche
         if (!Objects.isNull(record)) {
             if (!Objects.isNull(value)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("=====>json: {}", new String(value, Charset.forName("UTF-8")));
+                    log.debug("=====>json: {}", new String(value, StandardCharsets.UTF_8));
                 }
-                oggMessage = GsonUtil.fromJson(new String(value, Charset.forName("UTF-8")), OGGMessage.class);
+                oggMessage = GsonUtil.fromJson(new String(value, StandardCharsets.UTF_8), OGGMessage.class);
                 oggMessage.setOffset(record.offset());
                 oggMessage.setTopicName(record.topic());
                 oggMessage.setPartition(record.partition());
             }
             if (!Objects.isNull(key)) {
                 if (log.isDebugEnabled()) {
-                    log.debug("=====>key: {}", new String(key, Charset.forName("UTF-8")));
+                    log.debug("=====>key: {}", new String(key, StandardCharsets.UTF_8));
                 }
-                oggMessage.setKey(new String(key, Charset.forName("UTF-8")));
+                oggMessage.setKey(new String(key, StandardCharsets.UTF_8));
             }
 
         }
