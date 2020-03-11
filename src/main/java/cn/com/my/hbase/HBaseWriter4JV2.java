@@ -2,10 +2,7 @@ package cn.com.my.hbase;
 
 import cn.com.my.common.constant.OGGOpType;
 import cn.com.my.common.model.OGGMessage;
-import cn.com.my.common.utils.GsonUtil;
 import cn.com.my.common.utils.HBaseUtils;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -22,7 +19,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
+
 
 @Slf4j
 @Builder
@@ -74,9 +71,7 @@ public class HBaseWriter4JV2 extends RichSinkFunction<List<OGGMessage>> implemen
                         Bytes.toBytes(String.valueOf(true)));
             }
             Map<String, String> keyValues = record.getKeyValues();
-            keyValues.entrySet().forEach(entry -> {
-                String key = entry.getKey();
-                String value = entry.getValue();
+            keyValues.forEach((key, value) -> {
                 if (StringUtils.isBlank(value)) {
                     value = HBaseUtils.NULL_STRING;
                 }
