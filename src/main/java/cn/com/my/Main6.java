@@ -110,8 +110,8 @@ public class Main6 {
                 readTopic,
                 new OGGMessageSchema(),
                 readKafkaPro);
-//        flinkKafkaConsumer.setStartFromGroupOffsets();
-        flinkKafkaConsumer.setStartFromLatest();  //for test
+        flinkKafkaConsumer.setStartFromGroupOffsets();
+//        flinkKafkaConsumer.setStartFromLatest();  //for test
 
         DataStream<OGGMessage> stream = env.addSource(flinkKafkaConsumer);
 //        stream.print();
@@ -154,7 +154,7 @@ public class Main6 {
                 .flatMap((FlatMapFunction<List<String>, String>) (value, out) ->
                         value.forEach(record -> out.collect(record)))
                 .returns(Types.STRING);
-        stringSingleOutputStreamOperator.print();
+//        stringSingleOutputStreamOperator.print();
 
         Properties writeKafkaPro = new Properties();
         writeKafkaPro.setProperty(PropertiesConstants.BOOTSTRAP_SERVERS, writeBootstrapServers);
@@ -162,7 +162,7 @@ public class Main6 {
         writeKafkaPro.setProperty(PropertiesConstants.TRANSACTION_TIMEOUT_MS, String.valueOf(5 * 60 * 1000));
         FlinkKafkaProducer flinkKafkaProducer = new FlinkKafkaProducer(
                 writeTopic,
-                new OGGMessageSchema(writeTopic),
+                new OGGMessageSchema(writeTopic, primaryKeyName),
                 writeKafkaPro,
                 FlinkKafkaProducer.Semantic.EXACTLY_ONCE);
 

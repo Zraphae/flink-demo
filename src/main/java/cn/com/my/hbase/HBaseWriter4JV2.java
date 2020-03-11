@@ -83,8 +83,8 @@ public class HBaseWriter4JV2 extends RichSinkFunction<List<OGGMessage>> implemen
             }
             this.mutator.mutate(put);
         }
-        log.info("==>hbase mutator flush, flush size: {}", records.size());
         this.mutator.flush();
+        log.info("==>hbase mutator flush, flush size: {}", records.size());
     }
 
 

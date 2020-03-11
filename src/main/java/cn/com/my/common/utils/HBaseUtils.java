@@ -18,15 +18,20 @@ public class HBaseUtils {
         }else {
             jsonObject = GsonUtil.parse2JsonObj(oggMessage.getAfter().toString());
         }
+        String primaryValues = getPrimaryValues(primaryKeyName, jsonObject);
+        return primaryValues;
+    }
+
+
+    public static String getPrimaryValues(String primaryKeyName, JsonObject jsonObject){
+
         String[] primaryKeys = primaryKeyName.split(",");
         String[] keyValues = new String[primaryKeys.length];
         for(int index=0; index<primaryKeys.length; index++){
             String keyValue = jsonObject.get(primaryKeys[index]).getAsString();
             keyValues[index] = keyValue;
         }
-        String hbaseRowKey = Joiner.on("_").join(keyValues);
-
-        return hbaseRowKey;
+        return Joiner.on("_").join(keyValues);
     }
 
 }
