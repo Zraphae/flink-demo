@@ -110,8 +110,8 @@ public class Main6 {
                 readTopic,
                 new OGGMessageSchema(),
                 readKafkaPro);
-//        flinkKafkaConsumer.setStartFromGroupOffsets();
-        flinkKafkaConsumer.setStartFromLatest();  //for test
+        flinkKafkaConsumer.setStartFromGroupOffsets();
+//        flinkKafkaConsumer.setStartFromLatest();  //for test
 
         DataStream<OGGMessage> stream = env.addSource(flinkKafkaConsumer);
 //        stream.print();
