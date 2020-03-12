@@ -36,8 +36,6 @@ import org.apache.http.HttpHost;
 import java.util.List;
 import java.util.Properties;
 
-import static cn.com.my.common.constant.PropertiesConstants.ELASTICSEARCH_BULK_FLUSH_MAX_ACTIONS;
-import static cn.com.my.common.constant.PropertiesConstants.STREAM_SINK_PARALLELISM;
 
 
 @Slf4j
@@ -85,8 +83,8 @@ public class Main6 {
         String esHosts = params.get("es.hosts", "127.0.0.1:9200");
         String esIndexFields = params.get("es.index.fields", "seq_no,is_hit");
         String esIndexName = params.get("es.index.name", "test_index");
-        int bulkFlushMaxActions = params.getInt(ELASTICSEARCH_BULK_FLUSH_MAX_ACTIONS, 40);
-        int sinkParallelism = params.getInt(STREAM_SINK_PARALLELISM, 5);
+        int bulkFlushMaxActions = params.getInt(PropertiesConstants.ELASTICSEARCH_BULK_FLUSH_MAX_ACTIONS, 40);
+        int sinkParallelism = params.getInt(PropertiesConstants.STREAM_SINK_PARALLELISM, 5);
         long esBulkFlushInterval = params.getLong("es.bulk.flush.interval", 60 * 1000L);
 
 
