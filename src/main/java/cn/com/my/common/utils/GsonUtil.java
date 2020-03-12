@@ -1,13 +1,17 @@
 package cn.com.my.common.utils;
 
+import cn.com.my.common.constant.OGGOpType;
+import cn.com.my.common.model.OGGMessage;
 import com.google.gson.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.types.Row;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Objects;
 
 
@@ -28,6 +32,29 @@ public class GsonUtil {
 
     public static byte[] toJSONBytes(Object value) {
         return gson.toJson(value).getBytes(DEFAULT_CHARSET);
+    }
+
+    public static byte[] toJSONBytes(OGGMessage oggMessage, String esIndexFields) {
+
+        if (StringUtils.isBlank(esIndexFields)) {
+            return "".getBytes(DEFAULT_CHARSET);
+        }
+
+        JsonObject result = new JsonObject();
+        String[] fields = esIndexFields.split(",");
+        Map<String, String> keyValues = oggMessage.getKeyValues();
+        for (int index = 0; index < fields.length; index++) {
+            String key = fields[index];
+            String value = keyValues.get(key);
+            if (StringUtils.isBlank(value)) {
+                value = HBaseUtils.NULL_STRING;
+            }
+            result.addProperty(key, value);
+        }
+        if(StringUtils.equals(OGGOpType.DELETE.getValue(), oggMessage.getOpType())){
+            result.addProperty(HBaseUtils.DELETE_FLAG, String.valueOf(true));
+        }
+        return result.toString().getBytes(DEFAULT_CHARSET);
     }
 
     public static byte[] toJSONBytes(Row record, String[] esIndexFields, RowTypeInfo rowTypeInfo) {

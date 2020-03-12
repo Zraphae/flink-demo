@@ -3,7 +3,10 @@ package cn.com.my;
 import cn.com.my.common.constant.PropertiesConstants;
 import cn.com.my.common.model.OGGMessage;
 import cn.com.my.common.schemas.OGGMessageSchema;
+import cn.com.my.common.utils.ElasticSearchUtils;
 import cn.com.my.common.utils.ExecutionEnvUtil;
+import cn.com.my.es.MyESSinkFunction;
+import cn.com.my.es.RetryRejectedExecutionFailureHandler;
 import cn.com.my.hbase.HBaseWriter4JV2;
 import cn.com.my.hbase.ProcessFunction4JV3;
 import com.google.common.collect.Lists;
@@ -24,12 +27,17 @@ import org.apache.flink.streaming.api.functions.windowing.WindowFunction;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
+import org.apache.flink.streaming.connectors.elasticsearch7.ElasticsearchSink;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaProducer;
 import org.apache.flink.util.Collector;
+import org.apache.http.HttpHost;
 
 import java.util.List;
 import java.util.Properties;
+
+import static cn.com.my.common.constant.PropertiesConstants.ELASTICSEARCH_BULK_FLUSH_MAX_ACTIONS;
+import static cn.com.my.common.constant.PropertiesConstants.STREAM_SINK_PARALLELISM;
 
 
 @Slf4j
@@ -73,6 +81,14 @@ public class Main6 {
         String hbaseFamilyName = params.get("hbase.family.name", "info");
         String primaryKeyName = params.get("primary.key.name", "seq_no");
         int flinkWindowDelay = params.getInt("flink.window.delay", 20);
+
+        String esHosts = params.get("es.hosts", "127.0.0.1:9200");
+        String esIndexFields = params.get("es.index.fields", "seq_no,is_hit");
+        String esIndexName = params.get("es.index.name", "test_index");
+        int bulkFlushMaxActions = params.getInt(ELASTICSEARCH_BULK_FLUSH_MAX_ACTIONS, 40);
+        int sinkParallelism = params.getInt(STREAM_SINK_PARALLELISM, 5);
+        long esBulkFlushInterval = params.getLong("es.bulk.flush.interval", 60 * 1000L);
+
 
 
         StreamExecutionEnvironment env = ExecutionEnvUtil.prepare(params);
@@ -139,6 +155,26 @@ public class Main6 {
                 .build();
         apply.addSink(hBaseWriter);
 
+
+
+        List<HttpHost> esAddresses = ElasticSearchUtils.getEsAddresses(esHosts);
+        log.info("-----esAddresses: {}, parameterTool: {}, ", esAddresses, params);
+
+        MyESSinkFunction esSinkFunction = MyESSinkFunction.builder().
+                indexName(esIndexName)
+                .esIndexFields(esIndexFields)
+                .primaryKeys(primaryKeyName)
+                .build();
+
+        ElasticsearchSink.Builder<List<OGGMessage>> esSinkBuilder = new ElasticsearchSink.Builder<>(esAddresses, esSinkFunction);
+        esSinkBuilder.setBulkFlushMaxActions(bulkFlushMaxActions);
+        esSinkBuilder.setBulkFlushInterval(esBulkFlushInterval);
+        esSinkBuilder.setFailureHandler(new RetryRejectedExecutionFailureHandler());
+        ElasticsearchSink<List<OGGMessage>> esSink = esSinkBuilder.build();
+
+        apply.addSink(esSink);
+
+
         ProcessFunction4JV3 processFunction = ProcessFunction4JV3.builder().build();
         SingleOutputStreamOperator<List<String>> process = apply.process(processFunction);
 //        process.print();
@@ -152,7 +188,7 @@ public class Main6 {
         Properties writeKafkaPro = new Properties();
         writeKafkaPro.setProperty(PropertiesConstants.BOOTSTRAP_SERVERS, writeBootstrapServers);
         writeKafkaPro.setProperty(PropertiesConstants.GROUP_ID, writeGroupId);
-        writeKafkaPro.setProperty(PropertiesConstants.TRANSACTION_TIMEOUT_MS, String.valueOf(5 * 60 * 1000));
+        writeKafkaPro.setProperty(PropertiesConstants.TRANSACTION_TIMEOUT_MS, String.valueOf(5 * 60 * 1000L));
         FlinkKafkaProducer flinkKafkaProducer = new FlinkKafkaProducer(
                 writeTopic,
                 new OGGMessageSchema(writeTopic, primaryKeyName),
