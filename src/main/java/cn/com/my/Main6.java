@@ -81,7 +81,7 @@ public class Main6 {
         int flinkWindowDelay = params.getInt("flink.window.delay", 20);
 
         String esHosts = params.get("es.hosts", "127.0.0.1:9200");
-        String esIndexFields = params.get("es.index.fields", "seq_no,is_hit");
+        String esIndexFields = params.get("es.index.fields", "seq_no,is_hit,is_hit2");
         String esIndexName = params.get("es.index.name", "test_index");
         int bulkFlushMaxActions = params.getInt(PropertiesConstants.ELASTICSEARCH_BULK_FLUSH_MAX_ACTIONS, 40);
         int sinkParallelism = params.getInt(PropertiesConstants.STREAM_SINK_PARALLELISM, 5);
@@ -154,7 +154,6 @@ public class Main6 {
         apply.addSink(hBaseWriter);
 
 
-
         List<HttpHost> esAddresses = ElasticSearchUtils.getEsAddresses(esHosts);
         log.info("-----esAddresses: {}, parameterTool: {}, ", esAddresses, params);
 
@@ -168,9 +167,8 @@ public class Main6 {
         esSinkBuilder.setBulkFlushMaxActions(bulkFlushMaxActions);
         esSinkBuilder.setBulkFlushInterval(esBulkFlushInterval);
         esSinkBuilder.setFailureHandler(new RetryRejectedExecutionFailureHandler());
-        ElasticsearchSink<List<OGGMessage>> esSink = esSinkBuilder.build();
 
-        apply.addSink(esSink);
+        apply.addSink(esSinkBuilder.build());
 
 
         ProcessFunction4JV3 processFunction = ProcessFunction4JV3.builder().build();

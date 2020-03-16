@@ -38,7 +38,7 @@ public class OGGMessage {
 
 
     public Map<String, String> getKeyValues() {
-        if (StringUtils.equals(OGGOpType.DELETE.getValue(), this.getOpType())) {
+        if (StringUtils.equals(OGGOpType.D.getValue(), this.getOpType())) {
             return this.before;
         }
         return this.after;

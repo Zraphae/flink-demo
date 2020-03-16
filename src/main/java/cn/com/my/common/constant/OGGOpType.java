@@ -2,11 +2,11 @@ package cn.com.my.common.constant;
 
 public enum OGGOpType {
 
-    INSERT("I"),UPDATE("U"),DELETE("D");
+    I("I"), U("U"), D("D");
 
     private String value;
 
-    OGGOpType(String value){
+    OGGOpType(String value) {
         this.value = value;
     }
 

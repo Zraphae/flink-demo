@@ -1,8 +1,10 @@
 package cn.com.my;
 
+import cn.com.my.common.constant.OGGOpType;
 import cn.com.my.common.model.OGGMessage;
 import cn.com.my.common.utils.GsonUtil;
 import cn.com.my.common.utils.OrcBatchReader;
+import com.google.common.collect.Maps;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import lombok.extern.slf4j.Slf4j;
@@ -206,5 +208,22 @@ public class TestCase {
 
     }
 
+    @Test
+    public void testEm() {
+        OGGOpType oggOpType = OGGOpType.valueOf("I");
+        log.info("====>{}", oggOpType);
+
+    }
+
+
+    @Test
+    public void testMap() {
+        HashMap<String, String> map = Maps.newHashMap();
+        map.put("aa", "aaaaaa");
+
+        log.info("===>{}", map.get("aa"));
+        log.info("===>{}", map.get("bb"));
+
+    }
 
 }

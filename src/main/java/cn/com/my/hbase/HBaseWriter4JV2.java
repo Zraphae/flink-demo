@@ -65,7 +65,7 @@ public class HBaseWriter4JV2 extends RichSinkFunction<List<OGGMessage>> implemen
             String hBaseRowKey = HBaseUtils.getHBaseRowKey(record, primaryKeyName);
             Put put = new Put(Bytes.toBytes(hBaseRowKey));
 
-            if (StringUtils.equals(OGGOpType.DELETE.getValue(), record.getOpType())) {
+            if (StringUtils.equals(OGGOpType.D.getValue(), record.getOpType())) {
                 put.addColumn(Bytes.toBytes(this.family),
                         Bytes.toBytes(HBaseUtils.DELETE_FLAG),
                         Bytes.toBytes(String.valueOf(true)));

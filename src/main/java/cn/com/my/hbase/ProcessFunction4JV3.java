@@ -50,7 +50,7 @@ public class ProcessFunction4JV3 extends ProcessFunction<List<OGGMessage>, List<
             });
 
 
-            if (StringUtils.equals(OGGOpType.DELETE.getValue(), oggMessage.getOpType())) {
+            if (StringUtils.equals(OGGOpType.D.getValue(), oggMessage.getOpType())) {
                 jsonObject.addProperty(HBaseUtils.DELETE_FLAG, String.valueOf(true));
             }
 
